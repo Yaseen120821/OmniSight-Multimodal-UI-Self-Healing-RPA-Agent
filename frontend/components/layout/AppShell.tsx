@@ -38,11 +38,16 @@ export default function AppShell({ children }: AppShellProps) {
 
   // Sync state whenever any page or modal modifies stored records
   useEffect(() => {
-    const unsubscribe = subscribeToStoreUpdates(() => {
+    const sync = () => {
       setMetrics(getCalculatedMetrics());
       setActivities(getStoredActivities());
-    });
-    return unsubscribe;
+    };
+    const timer = setTimeout(sync, 0);
+    const unsubscribe = subscribeToStoreUpdates(sync);
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
 
   const handleRunTest = (projectId?: string) => {

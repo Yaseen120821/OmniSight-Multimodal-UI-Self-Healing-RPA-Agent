@@ -12,29 +12,50 @@ import ProjectsTable from "@/components/projects/ProjectsTable";
 import {
   getStoredProjects,
   getStoredTestRuns,
+  getStoredActivities,
+  initialProjects,
+  initialTestRuns,
+  initialActivities,
   subscribeToStoreUpdates,
-  initialExecutionTrends,
+  getTrendData,
+  getCalculatedMetrics,
+  filterRunsByPeriod,
+  filterActivitiesByPeriod,
 } from "@/lib/store";
-import { Project, TestRunDetail } from "@/types";
+import { Project, TestRunDetail, ActivityItem } from "@/types";
 import { Play, RefreshCw, Calendar, Sparkles, Layers, FolderGit2 } from "lucide-react";
 
 export default function DashboardPage() {
-  const [period, setPeriod] = useState("7d");
-  const [projectsList, setProjectsList] = useState<Project[]>(() => getStoredProjects());
-  const [storedRuns, setStoredRuns] = useState<TestRunDetail[]>(() => getStoredTestRuns());
+  const [period, setPeriod] = useState<"7d" | "30d" | "all">("7d");
+  const [projectsList, setProjectsList] = useState<Project[]>(initialProjects);
+  const [storedRuns, setStoredRuns] = useState<TestRunDetail[]>(initialTestRuns);
+  const [storedActivities, setStoredActivities] = useState<ActivityItem[]>(initialActivities);
   const [activeTableTab, setActiveTableTab] = useState<"runs" | "targets">("runs");
 
   useEffect(() => {
-    const unsubscribe = subscribeToStoreUpdates(() => {
+    const sync = () => {
       setProjectsList(getStoredProjects());
       setStoredRuns(getStoredTestRuns());
-    });
-    return unsubscribe;
+      setStoredActivities(getStoredActivities());
+    };
+
+    const timer = setTimeout(sync, 0);
+    const unsubscribe = subscribeToStoreUpdates(sync);
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
+
+  // Compute metrics and datasets according to the selected reporting period
+  const periodMetrics = getCalculatedMetrics(period);
+  const trendData = getTrendData(period);
+  const filteredRuns = filterRunsByPeriod(storedRuns, period);
+  const filteredActivities = filterActivitiesByPeriod(storedActivities, period);
 
   return (
     <AppShell>
-      {({ metrics, activities, isTestRunning, runningProjectId, handleRunTest }) => (
+      {({ isTestRunning, runningProjectId, handleRunTest }) => (
         <div className="space-y-6">
           {/* Welcome Banner & Primary Actions (Matching Reference Screenshot) */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white p-6 rounded-2xl shadow-sm relative overflow-hidden">
@@ -52,36 +73,55 @@ export default function DashboardPage() {
                 <Sparkles className="w-5 h-5 text-indigo-400" />
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                OmniSight is actively monitoring <strong>{metrics.totalProjects} target applications</strong> for UI regressions, DOM mutations, and visual drift.
+                OmniSight is actively monitoring <strong>{periodMetrics.totalProjects} target applications</strong> for UI regressions, DOM mutations, and visual drift.
               </p>
             </div>
 
             {/* Controls */}
             <div className="relative z-10 flex flex-wrap items-center gap-3">
               {/* Period Selector */}
-              <div className="flex items-center bg-slate-800/80 border border-slate-700/80 p-1 rounded-lg text-xs font-semibold text-slate-300">
+              <div
+                className="flex items-center bg-slate-800/80 border border-slate-700/80 p-1 rounded-lg text-xs font-semibold text-slate-300"
+                role="group"
+                aria-label="Date Range Filter"
+              >
                 <Calendar className="w-3.5 h-3.5 ml-2 mr-1 text-slate-400" />
                 <button
+                  type="button"
+                  id="filter-7d"
                   onClick={() => setPeriod("7d")}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    period === "7d" ? "bg-blue-600 text-white font-bold" : "hover:text-white"
+                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                    period === "7d"
+                      ? "bg-blue-600 text-white font-bold shadow-2xs"
+                      : "text-slate-300 hover:text-white"
                   }`}
+                  aria-pressed={period === "7d"}
                 >
                   7 Days
                 </button>
                 <button
+                  type="button"
+                  id="filter-30d"
                   onClick={() => setPeriod("30d")}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    period === "30d" ? "bg-blue-600 text-white font-bold" : "hover:text-white"
+                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                    period === "30d"
+                      ? "bg-blue-600 text-white font-bold shadow-2xs"
+                      : "text-slate-300 hover:text-white"
                   }`}
+                  aria-pressed={period === "30d"}
                 >
                   30 Days
                 </button>
                 <button
+                  type="button"
+                  id="filter-all"
                   onClick={() => setPeriod("all")}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    period === "all" ? "bg-blue-600 text-white font-bold" : "hover:text-white"
+                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                    period === "all"
+                      ? "bg-blue-600 text-white font-bold shadow-2xs"
+                      : "text-slate-300 hover:text-white"
                   }`}
+                  aria-pressed={period === "all"}
                 >
                   All Time
                 </button>
@@ -110,28 +150,28 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Section 1: Four KPI Metric Cards (Matching Reference Screenshot) */}
-          <MetricCards metrics={metrics} />
+          {/* Section 1: Four KPI Metric Cards (Matching Selected Period) */}
+          <MetricCards metrics={periodMetrics} />
 
           {/* Section 2: Two-Column Analytics Layout (Left & Right Column) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column: Test Execution Trend & Self-Healing Performance */}
             <div className="space-y-6 flex flex-col">
               <div className="flex-1">
-                <TrendChart data={initialExecutionTrends} />
+                <TrendChart data={trendData} period={period} />
               </div>
               <div className="flex-1">
-                <SelfHealingPerformance metrics={metrics} />
+                <SelfHealingPerformance metrics={periodMetrics} />
               </div>
             </div>
 
             {/* Right Column: Defect Category Distribution & Recent Activity */}
             <div className="space-y-6 flex flex-col">
               <div className="flex-1">
-                <DefectCategoryChart />
+                <DefectCategoryChart period={period} />
               </div>
               <div className="flex-1">
-                <RecentActivity activities={activities} />
+                <RecentActivity activities={filteredActivities} />
               </div>
             </div>
           </div>
@@ -148,7 +188,7 @@ export default function DashboardPage() {
                 }`}
               >
                 <Layers className="w-4 h-4" />
-                <span>Recent Test Runs ({storedRuns.length})</span>
+                <span>Recent Test Runs ({filteredRuns.length})</span>
               </button>
 
               <button
@@ -165,7 +205,7 @@ export default function DashboardPage() {
             </div>
 
             {activeTableTab === "runs" ? (
-              <RecentTestRunsTable testRuns={storedRuns} />
+              <RecentTestRunsTable testRuns={filteredRuns} />
             ) : (
               <ProjectsTable
                 projects={projectsList}

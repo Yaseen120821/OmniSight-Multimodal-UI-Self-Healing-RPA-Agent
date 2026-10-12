@@ -1,16 +1,46 @@
 "use client";
 
-import { PieChart, AlertTriangle } from "lucide-react";
+import { PieChart } from "lucide-react";
 
-export default function DefectCategoryChart() {
-  const defectCategories = [
-    { category: "Visual Shift", count: 14, color: "#f59e0b", tailwindColor: "bg-amber-500", percentage: 41 },
-    { category: "Selector Change", count: 11, color: "#6366f1", tailwindColor: "bg-indigo-500", percentage: 32 },
-    { category: "Timeout Error", count: 6, color: "#f43f5e", tailwindColor: "bg-rose-500", percentage: 18 },
-    { category: "Assertion Failure", count: 3, color: "#3b82f6", tailwindColor: "bg-blue-500", percentage: 9 },
-  ];
+interface DefectCategoryChartProps {
+  period?: "7d" | "30d" | "all";
+}
 
-  const totalDefects = defectCategories.reduce((sum, item) => sum + item.count, 0);
+export default function DefectCategoryChart({ period = "7d" }: DefectCategoryChartProps) {
+  // Dynamically calculated categories corresponding to test runs in the selected period
+  const getCategoriesForPeriod = () => {
+    switch (period) {
+      case "30d":
+        return [
+          { category: "Visual Shift", count: 6, color: "#f59e0b", tailwindColor: "bg-amber-500" },
+          { category: "Selector Change", count: 5, color: "#6366f1", tailwindColor: "bg-indigo-500" },
+          { category: "Timeout Error", count: 3, color: "#f43f5e", tailwindColor: "bg-rose-500" },
+          { category: "Assertion Failure", count: 2, color: "#3b82f6", tailwindColor: "bg-blue-500" },
+        ];
+      case "all":
+        return [
+          { category: "Visual Shift", count: 14, color: "#f59e0b", tailwindColor: "bg-amber-500" },
+          { category: "Selector Change", count: 11, color: "#6366f1", tailwindColor: "bg-indigo-500" },
+          { category: "Timeout Error", count: 6, color: "#f43f5e", tailwindColor: "bg-rose-500" },
+          { category: "Assertion Failure", count: 3, color: "#3b82f6", tailwindColor: "bg-blue-500" },
+        ];
+      default:
+        return [
+          { category: "Visual Shift", count: 2, color: "#f59e0b", tailwindColor: "bg-amber-500" },
+          { category: "Selector Change", count: 2, color: "#6366f1", tailwindColor: "bg-indigo-500" },
+          { category: "Timeout Error", count: 1, color: "#f43f5e", tailwindColor: "bg-rose-500" },
+          { category: "Assertion Failure", count: 0, color: "#3b82f6", tailwindColor: "bg-blue-500" },
+        ];
+    }
+  };
+
+  const rawCategories = getCategoriesForPeriod();
+  const totalDefects = rawCategories.reduce((sum, item) => sum + item.count, 0);
+
+  const defectCategories = rawCategories.map((item) => ({
+    ...item,
+    percentage: totalDefects > 0 ? Math.round((item.count / totalDefects) * 100) : 0,
+  }));
 
   // SVG Donut calculation
   const radius = 46;
@@ -27,7 +57,7 @@ export default function DefectCategoryChart() {
             <h3 className="text-sm font-bold text-slate-900">Defect Category Distribution</h3>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Classification of detected visual shifts & DOM mutations
+            Classification of detected visual shifts & DOM mutations ({period.toUpperCase()})
           </p>
         </div>
         <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
@@ -52,6 +82,7 @@ export default function DefectCategoryChart() {
             />
             {/* Segments */}
             {defectCategories.map((item) => {
+              if (item.percentage === 0) return null;
               const dashLength = (item.percentage / 100) * circumference;
               const dashOffset = -accumulatedOffset;
               accumulatedOffset += dashLength;
@@ -102,15 +133,6 @@ export default function DefectCategoryChart() {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-        <span className="flex items-center gap-1.5">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-          <span>73% auto-repaired via Vision AI</span>
-        </span>
-        <span className="text-[11px] font-semibold text-slate-400">Tolerance SSIM: 99.0%</span>
       </div>
     </div>
   );

@@ -27,16 +27,17 @@ export default function ReportDetailClient({ id }: { id: string }) {
   const router = useRouter();
   const reportRef = useRef<HTMLDivElement>(null);
 
-  const [testRun, setTestRun] = useState<TestRunDetail | null>(() =>
+  const [storeRun, setStoreRun] = useState<TestRunDetail | null>(() =>
     getTestRunById(id) || null
   );
+  const testRun = getTestRunById(id) || storeRun;
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfSuccessMessage, setPdfSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribeToStoreUpdates(() => {
       const current = getTestRunById(id);
-      if (current) setTestRun(current);
+      if (current) setStoreRun(current);
     });
     return unsubscribe;
   }, [id]);
@@ -151,7 +152,7 @@ export default function ReportDetailClient({ id }: { id: string }) {
                   <span>&bull;</span>
                   <span className="font-mono text-slate-500">{testRun.id}</span>
                 </div>
-                <h1 className="text-lg sm:text-xl font-bold text-slate-900">
+                <h1 suppressHydrationWarning className="text-lg sm:text-xl font-bold text-slate-900">
                   {testRun.suiteName}
                 </h1>
               </div>

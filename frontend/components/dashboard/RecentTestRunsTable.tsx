@@ -16,6 +16,8 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
+  FileSpreadsheet,
+  CheckSquare,
 } from "lucide-react";
 
 interface RecentTestRunsTableProps {
@@ -27,6 +29,7 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  const [selectedRunIds, setSelectedRunIds] = useState<string[]>([]);
   const [generatingPdfRunId, setGeneratingPdfRunId] = useState<string | null>(null);
   const [downloadSuccessToast, setDownloadSuccessToast] = useState<string | null>(null);
 
@@ -47,7 +50,30 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
   const endIndex = Math.min(startIndex + itemsPerPage, totalRecords);
   const paginatedRuns = filteredRuns.slice(startIndex, endIndex);
 
-  const handleDownloadPdf = async (run: TestRunDetail) => {
+  // Row selection handlers
+  const isAllPageSelected =
+    paginatedRuns.length > 0 &&
+    paginatedRuns.every((r) => selectedRunIds.includes(r.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllPageSelected) {
+      const pageIds = new Set(paginatedRuns.map((r) => r.id));
+      setSelectedRunIds((prev) => prev.filter((id) => !pageIds.has(id)));
+    } else {
+      const combined = new Set([...selectedRunIds, ...paginatedRuns.map((r) => r.id)]);
+      setSelectedRunIds(Array.from(combined));
+    }
+  };
+
+  const handleToggleSelectRow = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedRunIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDownloadPdf = async (run: TestRunDetail, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (generatingPdfRunId) return;
 
     setGeneratingPdfRunId(run.id);
@@ -61,6 +87,30 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
     } finally {
       setGeneratingPdfRunId(null);
     }
+  };
+
+  const handleExportSelectedCsv = () => {
+    if (selectedRunIds.length === 0) return;
+    const selectedRuns = testRuns.filter((r) => selectedRunIds.includes(r.id));
+    const headers = ["Run ID", "Suite Name", "Target", "Status", "Pass Rate", "Duration", "Executed At"];
+    const rows = selectedRuns.map((r) => [
+      r.id,
+      `"${r.suiteName}"`,
+      `"${r.projectName}"`,
+      r.status,
+      `${r.passRate}%`,
+      r.duration,
+      `"${r.startTime}"`,
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.href = encodedUri;
+    link.download = `OmniSight_Selected_${selectedRunIds.length}_Runs.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getStatusBadge = (status: TestRunDetail["status"]) => {
@@ -156,12 +206,49 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
         </div>
       </div>
 
+      {/* Bulk Action Toolbar (When 1 or more runs are selected) */}
+      {selectedRunIds.length > 0 && (
+        <div className="px-5 py-2.5 bg-blue-50/90 border-b border-blue-100 flex items-center justify-between text-xs text-blue-900 animate-in fade-in duration-150">
+          <div className="flex items-center gap-2 font-semibold">
+            <CheckSquare className="w-4 h-4 text-blue-600" />
+            <span>
+              <strong>{selectedRunIds.length}</strong> test run{selectedRunIds.length > 1 ? "s" : ""} selected
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportSelectedCsv}
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-50 text-blue-700 font-bold border border-blue-200 rounded-md shadow-2xs transition-colors"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Export Selected CSV</span>
+            </button>
+            <button
+              onClick={() => setSelectedRunIds([])}
+              className="px-2.5 py-1 text-slate-600 hover:text-slate-900 font-medium transition-colors"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Desktop Table View */}
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              <th scope="col" className="py-3 px-5">Run ID</th>
+              <th scope="col" className="py-3 px-4 w-10 text-center">
+                <input
+                  type="checkbox"
+                  aria-label="Select all test runs on this page"
+                  checked={isAllPageSelected}
+                  onChange={handleToggleSelectAll}
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+              </th>
+              <th scope="col" className="py-3 px-4">Run ID</th>
               <th scope="col" className="py-3 px-5">Target Application</th>
               <th scope="col" className="py-3 px-5">Executed At</th>
               <th scope="col" className="py-3 px-5">Duration</th>
@@ -173,17 +260,34 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
           <tbody className="divide-y divide-slate-100">
             {paginatedRuns.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-500">
+                <td colSpan={8} className="py-12 text-center text-slate-500">
                   No matching test executions found.
                 </td>
               </tr>
             ) : (
               paginatedRuns.map((run) => {
+                const isSelected = selectedRunIds.includes(run.id);
                 const isGeneratingPdf = generatingPdfRunId === run.id;
                 return (
-                  <tr key={run.id} className="hover:bg-slate-50/80 transition-colors group">
+                  <tr
+                    key={run.id}
+                    className={`transition-colors group ${
+                      isSelected ? "bg-blue-50/50" : "hover:bg-slate-50/80"
+                    }`}
+                  >
+                    {/* Checkbox column */}
+                    <td className="py-3.5 px-4 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select run ${run.id}`}
+                        checked={isSelected}
+                        onChange={(e) => handleToggleSelectRow(run.id, e as unknown as React.MouseEvent)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
+
                     {/* Run ID */}
-                    <td className="py-3.5 px-5">
+                    <td className="py-3.5 px-4">
                       <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
                         {run.id}
                       </span>
@@ -254,12 +358,12 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
                           <span>View Report</span>
                         </Link>
 
-                        {/* Download PDF */}
+                        {/* Download PDF (Affects ONLY this run) */}
                         <button
-                          onClick={() => handleDownloadPdf(run)}
+                          onClick={(e) => handleDownloadPdf(run, e)}
                           disabled={isGeneratingPdf}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded-lg shadow-2xs transition-colors"
-                          title="Download Multi-Page PDF Report"
+                          title={`Download PDF Report for ${run.id}`}
                         >
                           {isGeneratingPdf ? (
                             <>
@@ -284,34 +388,34 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
       </div>
 
       {/* Pagination Footer */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3.5 bg-slate-50 border-t border-slate-200 text-xs text-slate-600">
+      <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 bg-slate-50/50">
         <div>
-          Showing <strong className="text-slate-800">{startIndex + 1}</strong> to{" "}
-          <strong className="text-slate-800">{endIndex}</strong> of{" "}
-          <strong className="text-slate-800">{totalRecords}</strong> test runs
+          Showing <span className="font-bold text-slate-800">{totalRecords > 0 ? startIndex + 1 : 0}</span> to{" "}
+          <span className="font-bold text-slate-800">{endIndex}</span> of{" "}
+          <span className="font-bold text-slate-800">{totalRecords}</span> test runs
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={validPage <= 1}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+            disabled={validPage === 1}
+            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Previous Page"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Previous</span>
+            <ChevronLeft className="w-4 h-4" />
           </button>
 
-          <span className="px-2 font-semibold text-slate-700">
+          <span className="text-xs font-semibold px-2">
             Page {validPage} of {totalPages}
           </span>
 
           <button
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={validPage >= totalPages}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+            disabled={validPage === totalPages}
+            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Next Page"
           >
-            <span>Next</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>

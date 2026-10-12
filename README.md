@@ -172,6 +172,11 @@ OmniSight-Multimodal-UI-Self-Healing-RPA-Agent/
 ├── README.md                          # Comprehensive Enterprise Architecture & QA Documentation
 └── frontend/
     ├── app/
+    │   ├── api/
+    │   │   └── reports/
+    │   │       └── [id]/
+    │   │           └── pdf/
+    │   │               └── route.ts       # Server-side binary PDF Route Handler (application/pdf, Content-Disposition)
     │   ├── globals.css                # Enterprise light theme CSS tokens & variables
     │   ├── layout.tsx                 # Root layout with Geist font loading & AppShell
     │   ├── page.tsx                   # Main Dashboard (KPIs, Two-Column Analytics, Runs Table)
@@ -258,16 +263,18 @@ OmniSight-Multimodal-UI-Self-Healing-RPA-Agent/
 | Test Scenario | Action Taken | Expected Outcome | Verification Status |
 | :--- | :--- | :--- | :--- |
 | **SaaS Dashboard Layout** | Load `http://localhost:3000` | Sidebar with 8 items + Health + Profile, Header with Search, Welcome banner, 4 KPI cards, Two-column analytics, Recent Runs table | **PASSED** |
-| **KPI Metrics Accuracy** | Compare metrics to store records | Displays true counts (14 targets, 48 runs, 89.6% pass rate, 5 defects) matching records | **PASSED** |
-| **Execution Trend & Defect Donut** | Inspect charts on main dashboard | 7-day stacked bar renders with tooltips; Donut chart renders with category percentages and center total | **PASSED** |
-| **Self-Healing Performance** | Review self-healing card | Displays repair attempts, verified repairs, resolution ratio bar, and AI strategy chips | **PASSED** |
-| **Table Tab Switcher** | Toggle between "Recent Test Runs" and "Registered Test Targets" | Smoothly switches between 8 recent test runs and the 14-target paginated inventory | **PASSED** |
-| **Target Pagination (12/page)** | Navigate between Page 1 and Page 2 | Shows 12 records on Page 1, remainder on Page 2; disables Previous on Page 1 and Next on last page; numbered buttons work | **PASSED** |
-| **PDF Generation (`/reports/run-101`)** | Click "Download PDF" on Commerce Portal report | Native vector PDF downloaded with filename `OmniSight_Commerce_Portal_run-101.pdf` without `html2canvas` errors | **PASSED** |
-| **Recent Test Runs Table PDF** | Click "Download PDF" icon in Recent Test Runs table | Directly triggers native PDF generator and downloads the report with toast feedback | **PASSED** |
-| **Run Full Test Suite** | Click "Run Full Test Suite" in banner | Dispatches automated test runs across all targets, updates target statuses, and adds activity records | **PASSED** |
-| **Target Registration Sync** | Register a new target in `/projects` | New target appears immediately in `/projects` and updates KPI counts on `/` without reload | **PASSED** |
-| **TypeScript & Build Check** | Run `npm run build` and `npm run lint` | Compiles 13 static/dynamic routes with zero TypeScript errors or ESLint warnings | **PASSED** |
+| **Date Range Filter (30 Days)** | Click "30 Days" button | Active blue style on "30 Days", recalculates executions (211), pass rate, 30-day weekly stacked bar trend, and 16 defect categories | **PASSED** |
+| **Date Range Filter (All Time)** | Click "All Time" button | Active blue style on "All Time", recalculates executions (241), all-time monthly trend (Jul..Oct), and 34 historical defects | **PASSED** |
+| **Date Range Filter (7 Days)** | Click "7 Days" button | Returns to 7-day daily breakdown, agreeing with KPI cards and defect tally without altering stored records | **PASSED** |
+| **Isolated Row Selection** | Click checkbox on `run-101` in Recent Test Runs table | Selects ONLY `run-101`; other rows remain unselected; bulk toolbar displays "1 test run selected" with "Export Selected CSV" | **PASSED** |
+| **Deselect All Bulk Action** | Click "Deselect All" in bulk toolbar | Clears selection state cleanly without affecting table rows or navigating away | **PASSED** |
+| **Run-Specific Report Routing (`run-3115`)** | Navigate to `/reports/run-3115` | Displays authentic Analytics Workspace data, 42 assertions, 100% pass rate, and zero regression | **PASSED** |
+| **Report Not-Found State (`run-99999`)** | Navigate to `/reports/run-99999` | Displays structured "Test Report Not Found" view with run ID and "Return to Reports List" action | **PASSED** |
+| **PDF File Signature & Format** | Inspect generated PDF buffer via `/api/reports/[id]/pdf` and browser download | Authentic `%PDF-` magic bytes, `%%EOF` trailer, MIME type `application/pdf`, descriptive filename `OmniSight-run-3115.pdf` | **PASSED** |
+| **Distinct PDF Exports** | Download PDFs for `run-101` and `run-3115` | Exports contain different byte streams, correct run IDs, target URLs, and distinct assertion logs | **PASSED** |
+| **Recent Test Runs Table PDF** | Click "PDF" button on individual table row | Triggers PDF export exclusively for that specific run without opening View Report link | **PASSED** |
+| **Target Pagination (12/page)** | Navigate between Page 1 and Page 2 in Target Inventory | Shows 12 records on Page 1, remainder on Page 2; disables Previous on Page 1 and Next on last page | **PASSED** |
+| **TypeScript & Build Check** | Run `npm run build` and `npm run lint` | Compiles 17 static, dynamic, and PPR routes with zero TypeScript errors or ESLint warnings | **PASSED** |
 
 ---
 

@@ -85,7 +85,7 @@ export default function MetricCards({ metrics }: MetricCardsProps) {
                   <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                     {card.title}
                   </p>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2 tracking-tight">
+                  <h2 suppressHydrationWarning className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2 tracking-tight">
                     {card.value}
                   </h2>
                 </div>
@@ -95,7 +95,7 @@ export default function MetricCards({ metrics }: MetricCardsProps) {
               </div>
 
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
-                <span className="text-xs text-slate-500 font-medium truncate">
+                <span suppressHydrationWarning className="text-xs text-slate-500 font-medium truncate">
                   {card.subtitle}
                 </span>
                 <div

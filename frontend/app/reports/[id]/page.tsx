@@ -8,16 +8,27 @@ export function generateStaticParams() {
     { id: "run-102" },
     { id: "run-103" },
     { id: "run-104" },
+    { id: "run-3115" },
+    { id: "run-201" },
+    { id: "run-202" },
+    { id: "run-203" },
   ];
 }
 
-export default async function ReportDetailPage({
+async function ReportDetailContent({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  return <ReportDetailClient id={id} />;
+}
 
+export default function ReportDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   return (
     <Suspense
       fallback={
@@ -27,7 +38,7 @@ export default async function ReportDetailPage({
         </div>
       }
     >
-      <ReportDetailClient id={id} />
+      <ReportDetailContent params={params} />
     </Suspense>
   );
 }
