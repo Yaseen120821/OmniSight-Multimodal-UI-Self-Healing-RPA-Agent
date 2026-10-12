@@ -22,6 +22,7 @@ export default function Header({
 }: HeaderProps) {
   const pathname = usePathname();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const getPageInfo = () => {
     switch (pathname) {
@@ -143,19 +144,50 @@ export default function Header({
             <NotificationPanel isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
           </div>
 
-          {/* User Avatar */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-            <div
-              className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center ring-2 ring-slate-100 shadow-2xs"
-              title="Logged in as Admin (Alex Rivera)"
-              aria-label="User Avatar: Alex Rivera"
+          {/* User Avatar with Profile Dropdown */}
+          <div className="relative pl-2 border-l border-slate-200">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2 text-left focus:outline-none focus:ring-2 focus:ring-blue-600 rounded-lg p-1 hover:bg-slate-50 transition-colors"
+              aria-label="User Profile Menu"
+              aria-expanded={userMenuOpen}
             >
-              AR
-            </div>
-            <div className="hidden xl:block text-left">
-              <p className="text-xs font-semibold text-slate-900 leading-tight">Alex Rivera</p>
-              <p className="text-[10px] text-slate-500 font-medium">Lead QA Engineer</p>
-            </div>
+              <div
+                className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center ring-2 ring-slate-100 shadow-2xs"
+                title="Logged in as Admin (Alex Rivera)"
+              >
+                AR
+              </div>
+              <div className="hidden xl:block text-left">
+                <p className="text-xs font-semibold text-slate-900 leading-tight">Alex Rivera</p>
+                <p className="text-[10px] text-slate-500 font-medium">Lead QA Engineer</p>
+              </div>
+            </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-2 border-b border-slate-100">
+                  <p className="font-bold text-slate-900">Alex Rivera</p>
+                  <p className="text-[11px] text-slate-500 truncate">alex.rivera@omnisight.dev</p>
+                </div>
+                <div className="py-1">
+                  <a href="/users" className="block px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+                    Team Members
+                  </a>
+                  <a href="/settings" className="block px-3 py-1.5 text-slate-700 hover:bg-slate-50">
+                    Account Settings
+                  </a>
+                </div>
+                <div className="border-t border-slate-100 pt-1">
+                  <button
+                    onClick={() => setUserMenuOpen(false)}
+                    className="w-full text-left px-3 py-1.5 text-rose-600 hover:bg-rose-50 font-medium"
+                  >
+                    Close Menu
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

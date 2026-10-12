@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OmniSight Frontend
 
-## Getting Started
+Enterprise SaaS Web Application for **OmniSight: Multimodal UI Self-Healing & RPA Agent**.
 
-First, run the development server:
+Built with [Next.js 16](https://nextjs.org/) App Router, [React 19](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), and [Tailwind CSS v4](https://tailwindcss.com/).
 
+---
+
+## 🚀 Quick Start
+
+### 1. Install dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Start the development server
+```bash
+npm run dev
+```
+Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Production Build & Verification
+```bash
+npm run build
+npm run lint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🌟 Core Modules
 
-To learn more about Next.js, take a look at the following resources:
+- **Dashboard (`app/page.tsx`)**:
+  - Welcome Banner with "Run Full Test Suite" action.
+  - 4 Equal KPI Metric Cards (Registered Targets, Test Runs, Pass Rate, Open Defects).
+  - Two-Column Analytics Layout:
+    - *Left Column*: 7-Day Test Execution Trend stacked bar chart + Self-Healing Performance metrics.
+    - *Right Column*: Defect Category Distribution donut chart + Real-time Recent Activity feed.
+  - Interactive Table Switcher between **Recent Test Runs** (with View Report and direct Download PDF actions) and **Registered Test Targets**.
+- **Projects & Targets (`app/projects/page.tsx`)**:
+  - Target inventory with top and bottom dual-pagination (12 items/page).
+  - Search, status filtering, and target registration modal.
+- **Reports Hub & Individual Report (`app/reports/page.tsx`, `app/reports/[id]/page.tsx`)**:
+  - Deep-dive diagnostic view with before/after visual regression wireframes, assertion logs, defect tables, and autonomous self-healing locators.
+- **Native Vector PDF Generator (`lib/pdf-generator.ts`)**:
+  - Multi-page `jsPDF` vector report generator engineered to avoid `html2canvas` Tailwind CSS v4 color crashes.
+- **Central Store Engine (`lib/store.ts`)**:
+  - Browser-persisted reactive store with custom event broadcasting (`omnisight_store_update`) ensuring immediate UI synchronization across tabs and pages without full-page reloads.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For detailed system architecture, verification matrix, and technical specs, please refer to the [Root README](../README.md).

@@ -110,17 +110,13 @@ export default function ProjectsTable({
           <span>Showing 0 records</span>
         ) : (
           <span>
-            Showing <strong className="text-slate-800">{startIndex + 1}</strong> to{" "}
-            <strong className="text-slate-800">{endIndex}</strong> of{" "}
+            Showing <strong className="text-slate-800">{startIndex + 1}–{endIndex}</strong> of{" "}
             <strong className="text-slate-800">{totalRecords}</strong> target applications
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="font-semibold text-slate-700 mr-2">
-          Page {validPage} of {totalPages}
-        </span>
+      <div className="flex items-center gap-1.5">
         <button
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={validPage <= 1}
@@ -130,6 +126,24 @@ export default function ProjectsTable({
           <ChevronLeft className="w-3.5 h-3.5" />
           <span>Previous</span>
         </button>
+
+        {/* Numbered Page Buttons */}
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+          <button
+            key={pageNum}
+            onClick={() => setCurrentPage(pageNum)}
+            aria-label={`Go to page ${pageNum}`}
+            aria-current={validPage === pageNum ? "page" : undefined}
+            className={cn(
+              "w-7 h-7 text-xs font-bold rounded-lg border transition-colors flex items-center justify-center",
+              validPage === pageNum
+                ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200"
+            )}
+          >
+            {pageNum}
+          </button>
+        ))}
 
         <button
           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}

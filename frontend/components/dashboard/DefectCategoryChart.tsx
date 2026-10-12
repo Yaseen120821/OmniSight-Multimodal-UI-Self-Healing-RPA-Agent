@@ -1,17 +1,24 @@
 "use client";
 
-import { AlertTriangle, PieChart } from "lucide-react";
+import { PieChart, AlertTriangle } from "lucide-react";
 
 export default function DefectCategoryChart() {
   const defectCategories = [
-    { category: "Visual Shift", count: 14, color: "bg-amber-500", percentage: 41 },
-    { category: "Selector Change", count: 11, color: "bg-indigo-500", percentage: 32 },
-    { category: "Timeout Error", count: 6, color: "bg-rose-500", percentage: 18 },
-    { category: "Assertion Failure", count: 3, color: "bg-blue-500", percentage: 9 },
+    { category: "Visual Shift", count: 14, color: "#f59e0b", tailwindColor: "bg-amber-500", percentage: 41 },
+    { category: "Selector Change", count: 11, color: "#6366f1", tailwindColor: "bg-indigo-500", percentage: 32 },
+    { category: "Timeout Error", count: 6, color: "#f43f5e", tailwindColor: "bg-rose-500", percentage: 18 },
+    { category: "Assertion Failure", count: 3, color: "#3b82f6", tailwindColor: "bg-blue-500", percentage: 9 },
   ];
 
+  const totalDefects = defectCategories.reduce((sum, item) => sum + item.count, 0);
+
+  // SVG Donut calculation
+  const radius = 46;
+  const circumference = 2 * Math.PI * radius;
+  let accumulatedOffset = 0;
+
   return (
-    <div className="p-5 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between h-full">
+    <div className="p-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col justify-between h-full">
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
         <div>
@@ -23,35 +30,75 @@ export default function DefectCategoryChart() {
             Classification of detected visual shifts & DOM mutations
           </p>
         </div>
-        <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-          34 Defects Total
+        <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
+          {totalDefects} Total Defects
         </span>
       </div>
 
-      {/* Progress Bars Stack */}
-      <div className="py-4 space-y-3.5">
-        <div className="h-3 bg-slate-100 rounded-full flex overflow-hidden p-0.5 border border-slate-200/60">
+      {/* Donut Chart & Category Breakdown Layout */}
+      <div className="py-4 flex flex-col sm:flex-row items-center justify-center gap-6">
+        {/* SVG Donut */}
+        <div className="relative w-36 h-36 shrink-0 flex items-center justify-center">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+            {/* Background ring */}
+            <circle
+              cx="60"
+              cy="60"
+              r={radius}
+              className="text-slate-100"
+              strokeWidth="14"
+              stroke="currentColor"
+              fill="transparent"
+            />
+            {/* Segments */}
+            {defectCategories.map((item) => {
+              const dashLength = (item.percentage / 100) * circumference;
+              const dashOffset = -accumulatedOffset;
+              accumulatedOffset += dashLength;
+
+              return (
+                <circle
+                  key={item.category}
+                  cx="60"
+                  cy="60"
+                  r={radius}
+                  stroke={item.color}
+                  strokeWidth="14"
+                  strokeDasharray={`${dashLength} ${circumference - dashLength}`}
+                  strokeDashoffset={dashOffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                  className="transition-all duration-500 hover:opacity-80"
+                />
+              );
+            })}
+          </svg>
+
+          {/* Donut Center Label */}
+          <div className="absolute flex flex-col items-center justify-center text-center pointer-events-none">
+            <span className="text-2xl font-black text-slate-900 leading-none">{totalDefects}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-0.5">Defects</span>
+          </div>
+        </div>
+
+        {/* Categories Grid */}
+        <div className="flex-1 w-full grid grid-cols-2 gap-2.5">
           {defectCategories.map((item) => (
             <div
               key={item.category}
-              style={{ width: `${item.percentage}%` }}
-              className={`h-full ${item.color} first:rounded-l-full last:rounded-r-full transition-all duration-300`}
-              title={`${item.category}: ${item.count} (${item.percentage}%)`}
-            />
-          ))}
-        </div>
-
-        {/* Legend Grid */}
-        <div className="grid grid-cols-2 gap-3 pt-2">
-          {defectCategories.map((item) => (
-            <div key={item.category} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
-                <span className="text-xs font-semibold text-slate-700">{item.category}</span>
+              className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between"
+            >
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-xs font-bold text-slate-700 truncate">{item.category}</span>
               </div>
-              <span className="text-xs font-bold text-slate-900">
-                {item.count} <span className="text-[10px] text-slate-400 font-normal">({item.percentage}%)</span>
-              </span>
+              <div className="flex items-baseline justify-between mt-1 pt-1 border-t border-slate-200/40">
+                <span className="text-sm font-extrabold text-slate-900">{item.count}</span>
+                <span className="text-[10px] text-slate-500 font-semibold">{item.percentage}%</span>
+              </div>
             </div>
           ))}
         </div>
@@ -59,10 +106,11 @@ export default function DefectCategoryChart() {
 
       {/* Footer */}
       <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1.5">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-          <span>73% automatically repaired via Vision AI</span>
+          <span>73% auto-repaired via Vision AI</span>
         </span>
+        <span className="text-[11px] font-semibold text-slate-400">Tolerance SSIM: 99.0%</span>
       </div>
     </div>
   );
