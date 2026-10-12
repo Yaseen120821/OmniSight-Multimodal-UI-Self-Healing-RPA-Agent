@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppShell from "@/components/layout/AppShell";
 import ProjectsTable from "@/components/projects/ProjectsTable";
-import { getStoredProjects, saveStoredProjects, getStoredActivities, saveStoredActivities } from "@/lib/store";
+import {
+  getStoredProjects,
+  saveStoredProjects,
+  getStoredActivities,
+  saveStoredActivities,
+  subscribeToStoreUpdates,
+} from "@/lib/store";
 import { Project, ActivityItem } from "@/types";
 import { FolderPlus, FolderGit2, Plus } from "lucide-react";
 
@@ -12,6 +18,13 @@ export default function ProjectsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newTargetUrl, setNewTargetUrl] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = subscribeToStoreUpdates(() => {
+      setProjectsList(getStoredProjects());
+    });
+    return unsubscribe;
+  }, []);
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();

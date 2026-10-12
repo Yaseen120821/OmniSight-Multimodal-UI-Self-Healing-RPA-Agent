@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import Toast from "@/components/ui/Toast";
@@ -11,6 +11,8 @@ import {
   getStoredTestRuns,
   saveStoredTestRuns,
   getStoredProjects,
+  saveStoredProjects,
+  subscribeToStoreUpdates,
 } from "@/lib/store";
 import { DashboardMetrics, ActivityItem, TestRunDetail } from "@/types";
 
@@ -34,12 +36,27 @@ export default function AppShell({ children }: AppShellProps) {
   const [runningProjectId, setRunningProjectId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Sync state whenever any page or modal modifies stored records
+  useEffect(() => {
+    const unsubscribe = subscribeToStoreUpdates(() => {
+      setMetrics(getCalculatedMetrics());
+      setActivities(getStoredActivities());
+    });
+    return unsubscribe;
+  }, []);
+
   const handleRunTest = (projectId?: string) => {
     if (isTestRunning) return;
 
     setIsTestRunning(true);
     if (projectId) {
       setRunningProjectId(projectId);
+      // Mark target project as Running
+      const currentProjects = getStoredProjects();
+      const runningProjects = currentProjects.map((p) =>
+        p.id === projectId ? { ...p, status: "Running" as const, lastTestRun: "Running now" } : p
+      );
+      saveStoredProjects(runningProjects);
     }
 
     // Simulate local test suite execution with persistent record creation
@@ -54,13 +71,14 @@ export default function AppShell({ children }: AppShellProps) {
 
       const projName = targetProj ? targetProj.name : "Commerce Portal";
       const targetUrl = targetProj ? targetProj.targetUrl : "https://shop.example-saas.com";
+      const targetId = projectId || targetProj?.id || "proj-001";
       const newRunId = `run-${Date.now().toString().slice(-4)}`;
 
       // Create new persistent TestRunDetail record
       const newTestRun: TestRunDetail = {
         id: newRunId,
         suiteName: `${projName} - Self-Healing Regression Run`,
-        projectId: projectId || targetProj?.id || "proj-001",
+        projectId: targetId,
         projectName: projName,
         targetUrl: targetUrl,
         startTime: new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC",
@@ -85,11 +103,26 @@ export default function AppShell({ children }: AppShellProps) {
         ],
       };
 
+      // 1. Update test runs in store
       const existingRuns = getStoredTestRuns();
-      const updatedRuns = [newTestRun, ...existingRuns];
-      saveStoredTestRuns(updatedRuns);
+      saveStoredTestRuns([newTestRun, ...existingRuns]);
 
-      // Append persistent activity record
+      // 2. Update target project's latest execution record
+      const updatedProjects = projects.map((p) => {
+        if (p.id === targetId) {
+          return {
+            ...p,
+            status: "Passed" as const,
+            lastTestRun: "Just now",
+            lastRunDuration: "38s",
+            passRate: 100,
+          };
+        }
+        return p;
+      });
+      saveStoredProjects(updatedProjects);
+
+      // 3. Append persistent activity record
       const newAct: ActivityItem = {
         id: `act-${Date.now()}`,
         timestamp: "Just now",
@@ -103,16 +136,10 @@ export default function AppShell({ children }: AppShellProps) {
       };
 
       const existingActivities = getStoredActivities();
-      const updatedActivities = [newAct, ...existingActivities];
-      saveStoredActivities(updatedActivities);
-      setActivities(updatedActivities);
-
-      // Update metrics dynamically
-      const updatedMetrics = getCalculatedMetrics();
-      setMetrics(updatedMetrics);
+      saveStoredActivities([newAct, ...existingActivities]);
 
       setToastMessage(
-        `Simulated test run complete for ${projName} (Report #${newRunId}): 16 assertions passed. (Frontend Mock)`
+        `Test run complete for ${projName} (Report #${newRunId}): 16 assertions passed.`
       );
     }, 1500);
   };

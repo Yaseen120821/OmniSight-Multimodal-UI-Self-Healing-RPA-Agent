@@ -11,6 +11,8 @@ import {
   saveStoredActivities,
   getTestRunById,
   getCalculatedMetrics,
+  dispatchStoreUpdate,
+  subscribeToStoreUpdates,
 } from "./store";
 
 import { NotificationItem, UserItem } from "@/types";
@@ -90,4 +92,6 @@ export {
   saveStoredActivities,
   getTestRunById,
   getCalculatedMetrics,
+  dispatchStoreUpdate,
+  subscribeToStoreUpdates,
 };

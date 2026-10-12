@@ -382,10 +382,28 @@ export function getStoredProjects(): Project[] {
   }
 }
 
+export function dispatchStoreUpdate() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("omnisight_store_update"));
+  }
+}
+
+export function subscribeToStoreUpdates(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const handler = () => callback();
+  window.addEventListener("omnisight_store_update", handler);
+  window.addEventListener("storage", handler);
+  return () => {
+    window.removeEventListener("omnisight_store_update", handler);
+    window.removeEventListener("storage", handler);
+  };
+}
+
 export function saveStoredProjects(projects: Project[]) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+    dispatchStoreUpdate();
   } catch (e) {
     console.warn("LocalStorage write error for projects:", e);
   }
@@ -410,6 +428,7 @@ export function saveStoredTestRuns(runs: TestRunDetail[]) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEYS.TEST_RUNS, JSON.stringify(runs));
+    dispatchStoreUpdate();
   } catch (e) {
     console.warn("LocalStorage write error for test runs:", e);
   }
@@ -434,6 +453,7 @@ export function saveStoredActivities(activities: ActivityItem[]) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(activities));
+    dispatchStoreUpdate();
   } catch (e) {
     console.warn("LocalStorage write error for activities:", e);
   }
@@ -449,38 +469,55 @@ export function getCalculatedMetrics(): DashboardMetrics {
   const runs = getStoredTestRuns();
 
   const totalProjects = projects.length;
-  const testsExecuted = runs.length > 0 ? runs.length * 32 : 248;
-  const passedTests = runs.filter((r) => r.status === "Passed").length;
-  const failedTestsCount = runs.filter((r) => r.status === "Failed").length;
-  const repairedTests = runs.filter((r) => r.status === "Repaired").length;
+  
+  // Aggregate actual assertions across all recorded test runs
+  let totalAssertions = 0;
+  let passedAssertions = 0;
+  let failedAssertions = 0;
+  let repairedCount = 0;
+  let totalHealingAttempts = 0;
+  let validatedHealing = 0;
 
-  const totalRuns = runs.length || 1;
-  const overallPassRate = Number(
-    (((passedTests + repairedTests) / totalRuns) * 100).toFixed(1)
-  );
+  runs.forEach((r) => {
+    const totalAst = r.totalAssertions || (r.assertions ? r.assertions.length : 0);
+    const passAst = r.passedAssertions || (r.assertions ? r.assertions.filter(a => a.status === "Passed" || a.status === "Repaired").length : 0);
+    const failAst = r.failedAssertions || (r.assertions ? r.assertions.filter(a => a.status === "Failed").length : 0);
 
-  const totalHealingAttempts = runs.reduce(
-    (acc, r) => acc + (r.selfHealing ? r.selfHealing.length : 0),
-    15
-  );
-  const validatedHealing = runs.reduce(
-    (acc, r) =>
-      acc + (r.selfHealing ? r.selfHealing.filter((h) => h.status === "Validated").length : 0),
-    14
-  );
+    totalAssertions += totalAst;
+    passedAssertions += passAst;
+    failedAssertions += failAst;
 
-  const selfHealingSuccessRate = Number(
-    ((validatedHealing / (totalHealingAttempts || 1)) * 100).toFixed(1)
-  );
+    if (r.status === "Repaired") {
+      repairedCount += 1;
+    }
+
+    if (r.selfHealing && r.selfHealing.length > 0) {
+      totalHealingAttempts += r.selfHealing.length;
+      validatedHealing += r.selfHealing.filter((h) => h.status === "Validated").length;
+    }
+  });
+
+  const testsExecuted = totalAssertions > 0 ? totalAssertions : (runs.length * 24);
+  const passedTests = passedAssertions;
+  const failedTests = failedAssertions;
+  const repairedTests = repairedCount;
+
+  const overallPassRate = testsExecuted > 0
+    ? Number(((passedTests / testsExecuted) * 100).toFixed(1))
+    : 100;
+
+  const selfHealingSuccessRate = totalHealingAttempts > 0
+    ? Number(((validatedHealing / totalHealingAttempts) * 100).toFixed(1))
+    : 100;
 
   return {
     totalProjects,
     testsExecuted,
-    passedTests: 219,
-    failedTests: failedTestsCount > 0 ? failedTestsCount : 29,
+    passedTests,
+    failedTests,
     repairedTests,
-    overallPassRate: overallPassRate > 0 ? overallPassRate : 88.3,
-    selfHealingSuccessRate: selfHealingSuccessRate > 0 ? selfHealingSuccessRate : 93.3,
+    overallPassRate,
+    selfHealingSuccessRate,
     totalHealingAttempts,
     lastUpdated: "Just now",
   };

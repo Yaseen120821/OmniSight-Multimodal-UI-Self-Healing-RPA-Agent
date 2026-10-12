@@ -1,19 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppShell from "@/components/layout/AppShell";
 import MetricCards from "@/components/dashboard/MetricCards";
 import TrendChart from "@/components/dashboard/TrendChart";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import DefectCategoryChart from "@/components/dashboard/DefectCategoryChart";
 import ProjectsTable from "@/components/projects/ProjectsTable";
-import { getStoredProjects, initialExecutionTrends } from "@/lib/store";
+import { getStoredProjects, subscribeToStoreUpdates, initialExecutionTrends } from "@/lib/store";
 import { Project } from "@/types";
 import { Play, RefreshCw, Calendar, Sparkles } from "lucide-react";
 
 export default function DashboardPage() {
   const [period, setPeriod] = useState("7d");
-  const [projectsList] = useState<Project[]>(() => getStoredProjects());
+  const [projectsList, setProjectsList] = useState<Project[]>(() => getStoredProjects());
+
+  useEffect(() => {
+    const unsubscribe = subscribeToStoreUpdates(() => {
+      setProjectsList(getStoredProjects());
+    });
+    return unsubscribe;
+  }, []);
 
   return (
     <AppShell>

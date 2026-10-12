@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
-import { getTestRunById } from "@/lib/store";
+import { getTestRunById, subscribeToStoreUpdates } from "@/lib/store";
+import { generateTestRunPdf } from "@/lib/pdf-generator";
 import { TestRunDetail } from "@/types";
 import {
   ArrowLeft,
@@ -21,17 +22,24 @@ import {
   RefreshCw,
   FileText,
 } from "lucide-react";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 
 export default function ReportDetailClient({ id }: { id: string }) {
   const router = useRouter();
   const reportRef = useRef<HTMLDivElement>(null);
 
-  const [testRun] = useState<TestRunDetail | null>(() =>
+  const [testRun, setTestRun] = useState<TestRunDetail | null>(() =>
     getTestRunById(id) || null
   );
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfSuccessMessage, setPdfSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToStoreUpdates(() => {
+      const current = getTestRunById(id);
+      if (current) setTestRun(current);
+    });
+    return unsubscribe;
+  }, [id]);
 
   const handleExportCsv = () => {
     if (!testRun) return;
@@ -50,49 +58,25 @@ export default function ReportDetailClient({ id }: { id: string }) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `OmniSight_Assertions_${testRun.projectName}_${testRun.id}.csv`);
+    link.setAttribute("download", `OmniSight_Assertions_${testRun.projectName.replace(/\s+/g, "_")}_${testRun.id}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleDownloadPdf = async () => {
-    if (!reportRef.current || !testRun || isGeneratingPdf) return;
+    if (!testRun || isGeneratingPdf) return;
 
     setIsGeneratingPdf(true);
+    setPdfSuccessMessage(null);
     try {
-      const element = reportRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
-      }
-
-      pdf.save(`OmniSight_Report_${testRun.projectName.replace(/\s+/g, "_")}_${testRun.id}.pdf`);
+      const filename = await generateTestRunPdf(testRun);
+      setPdfSuccessMessage(`Report PDF downloaded: ${filename}`);
+      setTimeout(() => setPdfSuccessMessage(null), 5000);
     } catch (err) {
       console.error("PDF generation failed:", err);
-      alert("Failed to generate PDF. Please try again.");
+      const detail = err instanceof Error ? err.message : "Internal rendering error";
+      alert(`Failed to generate PDF: ${detail}. Please check test run records.`);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -201,6 +185,22 @@ export default function ReportDetailClient({ id }: { id: string }) {
               </button>
             </div>
           </div>
+
+          {/* PDF Download Success Banner */}
+          {pdfSuccessMessage && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center justify-between animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{pdfSuccessMessage}</span>
+              </div>
+              <button
+                onClick={() => setPdfSuccessMessage(null)}
+                className="text-emerald-700 hover:text-emerald-900 font-bold px-2 text-sm"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           {/* PDF Capture Container */}
           <div ref={reportRef} className="space-y-6 bg-slate-50 p-1 rounded-xl">

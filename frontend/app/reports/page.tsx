@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
-import { getStoredTestRuns } from "@/lib/store";
+import { getStoredTestRuns, subscribeToStoreUpdates } from "@/lib/store";
 import { TestRunDetail } from "@/types";
 import {
   BarChart3,
@@ -19,9 +19,16 @@ import {
 } from "lucide-react";
 
 export default function ReportsPage() {
-  const [testRuns] = useState<TestRunDetail[]>(() => getStoredTestRuns());
+  const [testRuns, setTestRuns] = useState<TestRunDetail[]>(() => getStoredTestRuns());
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
+
+  useEffect(() => {
+    const unsubscribe = subscribeToStoreUpdates(() => {
+      setTestRuns(getStoredTestRuns());
+    });
+    return unsubscribe;
+  }, []);
 
   const filteredRuns = testRuns.filter((run) => {
     const matchesSearch =
@@ -144,8 +151,14 @@ export default function ReportsPage() {
                 <span className="text-xs font-semibold text-slate-500 uppercase">Visual Shift Alerts</span>
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               </div>
-              <h3 className="text-2xl font-bold text-slate-900 mt-2">1 Flagged</h3>
-              <p className="text-xs text-slate-500 mt-1">Admin Console layout shift pending review</p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-2">
+                {testRuns.filter((r) => r.hasVisualDiff).length} Flagged
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {testRuns.filter((r) => r.hasVisualDiff).length > 0
+                  ? "Suites flagged with visual drift requiring review"
+                  : "Zero visual shifts detected across all suites"}
+              </p>
             </div>
           </div>
 
