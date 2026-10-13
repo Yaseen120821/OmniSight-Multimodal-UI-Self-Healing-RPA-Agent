@@ -28,6 +28,7 @@ export default function ReportsPage() {
   const [selectedRunIds, setSelectedRunIds] = useState<string[]>([]);
   const [generatingPdfRunId, setGeneratingPdfRunId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const sync = () => {
@@ -74,13 +75,17 @@ export default function ReportsPage() {
     if (generatingPdfRunId) return;
 
     setGeneratingPdfRunId(run.id);
+    setToastMessage(null);
+    setErrorMessage(null);
     try {
       const filename = await generateTestRunPdf(run);
       setToastMessage(`Report downloaded: ${filename}`);
-      setTimeout(() => setToastMessage(null), 4000);
+      setTimeout(() => setToastMessage(null), 6000);
     } catch (err) {
       console.error("PDF generation failed:", err);
-      alert("Failed to generate PDF. Please try again.");
+      const detail = err instanceof Error ? err.message : "Internal rendering error";
+      setErrorMessage(`Failed to generate PDF: ${detail}. Please try again.`);
+      setTimeout(() => setErrorMessage(null), 6000);
     } finally {
       setGeneratingPdfRunId(null);
     }
@@ -147,12 +152,23 @@ export default function ReportsPage() {
         <div className="space-y-6">
           {/* Toast Notification */}
           {toastMessage && (
-            <div className="bg-emerald-600 text-white px-4 py-2 text-xs font-semibold rounded-xl flex items-center justify-between shadow-md">
+            <div id="reports-pdf-success-toast" className="bg-emerald-600 text-white px-4 py-2 text-xs font-semibold rounded-xl flex items-center justify-between shadow-md">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{toastMessage}</span>
               </div>
               <button onClick={() => setToastMessage(null)} className="font-bold text-sm px-2">
+                ✕
+              </button>
+            </div>
+          )}
+          {errorMessage && (
+            <div id="reports-pdf-error-toast" className="bg-rose-600 text-white px-4 py-2 text-xs font-semibold rounded-xl flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+              <button onClick={() => setErrorMessage(null)} className="font-bold text-sm px-2">
                 ✕
               </button>
             </div>

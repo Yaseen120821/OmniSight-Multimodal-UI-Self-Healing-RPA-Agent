@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getTestRunById, initialTestRuns } from "@/lib/store";
-import { createTestRunPdfDocument } from "@/lib/pdf-generator";
+import { createTestRunPdfDocument, getTestRunPdfFilename } from "@/lib/pdf-generator";
 
 export async function GET(
   request: NextRequest,
@@ -21,7 +21,7 @@ export async function GET(
 
   const doc = createTestRunPdfDocument(testRun);
   const arrayBuffer = doc.output("arraybuffer");
-  const filename = `OmniSight-${testRun.id}.pdf`;
+  const filename = getTestRunPdfFilename(testRun);
 
   return new Response(arrayBuffer, {
     status: 200,

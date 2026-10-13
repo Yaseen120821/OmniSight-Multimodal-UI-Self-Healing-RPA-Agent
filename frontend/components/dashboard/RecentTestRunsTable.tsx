@@ -18,6 +18,7 @@ import {
   ChevronRight,
   FileSpreadsheet,
   CheckSquare,
+  AlertTriangle,
 } from "lucide-react";
 
 interface RecentTestRunsTableProps {
@@ -32,6 +33,7 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
   const [selectedRunIds, setSelectedRunIds] = useState<string[]>([]);
   const [generatingPdfRunId, setGeneratingPdfRunId] = useState<string | null>(null);
   const [downloadSuccessToast, setDownloadSuccessToast] = useState<string | null>(null);
+  const [downloadErrorToast, setDownloadErrorToast] = useState<string | null>(null);
 
   const filteredRuns = testRuns.filter((run) => {
     const matchesSearch =
@@ -77,13 +79,17 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
     if (generatingPdfRunId) return;
 
     setGeneratingPdfRunId(run.id);
+    setDownloadSuccessToast(null);
+    setDownloadErrorToast(null);
     try {
       const filename = await generateTestRunPdf(run);
       setDownloadSuccessToast(`Report downloaded: ${filename}`);
-      setTimeout(() => setDownloadSuccessToast(null), 4000);
+      setTimeout(() => setDownloadSuccessToast(null), 6000);
     } catch (err) {
       console.error("PDF generation failed:", err);
-      alert("Failed to generate PDF. Please try again.");
+      const detail = err instanceof Error ? err.message : "Internal rendering error";
+      setDownloadErrorToast(`Failed to generate PDF: ${detail}. Please try again.`);
+      setTimeout(() => setDownloadErrorToast(null), 6000);
     } finally {
       setGeneratingPdfRunId(null);
     }
@@ -143,12 +149,23 @@ export default function RecentTestRunsTable({ testRuns }: RecentTestRunsTablePro
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
       {/* Toast Notification */}
       {downloadSuccessToast && (
-        <div className="bg-emerald-600 text-white px-4 py-2 text-xs font-semibold flex items-center justify-between">
+        <div id="table-pdf-success-toast" className="bg-emerald-600 text-white px-4 py-2 text-xs font-semibold flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{downloadSuccessToast}</span>
           </div>
           <button onClick={() => setDownloadSuccessToast(null)} className="font-bold text-sm px-2">
+            ✕
+          </button>
+        </div>
+      )}
+      {downloadErrorToast && (
+        <div id="table-pdf-error-toast" className="bg-rose-600 text-white px-4 py-2 text-xs font-semibold flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>{downloadErrorToast}</span>
+          </div>
+          <button onClick={() => setDownloadErrorToast(null)} className="font-bold text-sm px-2">
             ✕
           </button>
         </div>

@@ -33,6 +33,7 @@ export default function ReportDetailClient({ id }: { id: string }) {
   const testRun = getTestRunById(id) || storeRun;
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfSuccessMessage, setPdfSuccessMessage] = useState<string | null>(null);
+  const [pdfErrorMessage, setPdfErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribeToStoreUpdates(() => {
@@ -70,14 +71,16 @@ export default function ReportDetailClient({ id }: { id: string }) {
 
     setIsGeneratingPdf(true);
     setPdfSuccessMessage(null);
+    setPdfErrorMessage(null);
     try {
       const filename = await generateTestRunPdf(testRun);
-      setPdfSuccessMessage(`Report PDF downloaded: ${filename}`);
-      setTimeout(() => setPdfSuccessMessage(null), 5000);
+      setPdfSuccessMessage(`Report downloaded: ${filename}`);
+      setTimeout(() => setPdfSuccessMessage(null), 6000);
     } catch (err) {
       console.error("PDF generation failed:", err);
       const detail = err instanceof Error ? err.message : "Internal rendering error";
-      alert(`Failed to generate PDF: ${detail}. Please check test run records.`);
+      setPdfErrorMessage(`Failed to generate PDF: ${detail}. Please check test run records.`);
+      setTimeout(() => setPdfErrorMessage(null), 6000);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -189,7 +192,10 @@ export default function ReportDetailClient({ id }: { id: string }) {
 
           {/* PDF Download Success Banner */}
           {pdfSuccessMessage && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center justify-between animate-in fade-in duration-200">
+            <div
+              id="pdf-download-success-banner"
+              className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center justify-between animate-in fade-in duration-200"
+            >
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>{pdfSuccessMessage}</span>
@@ -197,6 +203,25 @@ export default function ReportDetailClient({ id }: { id: string }) {
               <button
                 onClick={() => setPdfSuccessMessage(null)}
                 className="text-emerald-700 hover:text-emerald-900 font-bold px-2 text-sm"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* PDF Download Error Banner */}
+          {pdfErrorMessage && (
+            <div
+              id="pdf-download-error-banner"
+              className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-semibold flex items-center justify-between animate-in fade-in duration-200"
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{pdfErrorMessage}</span>
+              </div>
+              <button
+                onClick={() => setPdfErrorMessage(null)}
+                className="text-rose-700 hover:text-rose-900 font-bold px-2 text-sm"
               >
                 ✕
               </button>

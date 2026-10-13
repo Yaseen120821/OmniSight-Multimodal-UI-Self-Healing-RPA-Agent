@@ -495,13 +495,32 @@ export function createTestRunPdfDocument(testRun: TestRunDetail): jsPDF {
 }
 
 /**
+ * Generates a clean, sanitized filename derived from the target application name and test run ID.
+ * Follows the enterprise convention: OmniSight_{TargetName}_{RunId}.pdf
+ * e.g., OmniSight_Commerce_Portal_run-3115.pdf
+ */
+export function getTestRunPdfFilename(testRun: { projectName?: string; id: string }): string {
+  const rawTargetName = (testRun.projectName || "Report").trim();
+  const sanitizedTargetName = rawTargetName
+    .replace(/[\s]+/g, "_")
+    .replace(/[^a-zA-Z0-9_]/g, "")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "") || "Report";
+
+  const sanitizedRunId = (testRun.id || "unknown")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, "_");
+
+  return `OmniSight_${sanitizedTargetName}_${sanitizedRunId}.pdf`;
+}
+
+/**
  * Generates and triggers browser download of an authentic PDF document.
  * Verifies standard %PDF- magic signature and manages object URL cleanup.
  */
 export async function generateTestRunPdf(testRun: TestRunDetail): Promise<string> {
+  const filename = getTestRunPdfFilename(testRun);
   const doc = createTestRunPdfDocument(testRun);
-  const cleanId = testRun.id.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const filename = `OmniSight-${cleanId}.pdf`;
 
   if (typeof window !== "undefined") {
     // Generate raw ArrayBuffer and verify authentic PDF signature
