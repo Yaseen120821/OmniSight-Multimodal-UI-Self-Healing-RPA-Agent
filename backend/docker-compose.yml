@@ -1,0 +1,48 @@
+# OmniSight — PostgreSQL development database only.
+# FastAPI backend runs in the local Python virtual environment.
+# Run: docker compose up -d postgres
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: omnisight_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-omnisight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omnisight_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-omnisight_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - omnisight_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omnisight} -d ${POSTGRES_DB:-omnisight_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  postgres_test:
+    image: postgres:16-alpine
+    container_name: omnisight_postgres_test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-omnisight}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omnisight_dev_pass}
+      POSTGRES_DB: omnisight_test_db
+    ports:
+      - "${POSTGRES_TEST_PORT:-5433}:5432"
+    volumes:
+      - omnisight_pg_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omnisight} -d omnisight_test_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  omnisight_pg_data:
+    name: omnisight_pg_data
+  omnisight_pg_test_data:
+    name: omnisight_pg_test_data
